@@ -1,0 +1,45 @@
+{
+  "name": "salespulse-cap",
+  "version": "1.0.0",
+  "description": "SalesPulse Analytics Application - CAP Backend",
+  "repository": "<Add your repository here>",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@sap/cds": "^9",
+    "@cap-js/hana": "^2",
+    "@cap-js/sqlite": "^2",
+    "express": "^4",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@cap-js/sqlite": "^2",
+    "@sap/cds-dk": "^9",
+    "@sap/eslint-plugin-cds": "^3",
+    "cds-plugin-ui5": "^0.13.0",
+    "eslint": "^9"
+  },
+  "scripts": {
+    "start": "cds-serve",
+    "watch": "cds watch",
+    "build": "cds build",
+    "deploy": "cds deploy",
+    "serve": "cds serve all --with-mocks --in-memory?",
+    "watch-salespulse-ui": "cds watch --open com.sap.salespulse.salespulseui/index.html?sap-ui-xx-viewCache=false --livereload false"
+  },
+  "cds": {
+    "requires": {
+      "db": {
+        "kind": "sql"
+      },
+      "[production]": {
+        "db": {
+          "kind": "hana"
+        }
+      }
+    }
+  },
+  "workspaces": [
+    "app/*"
+  ]
+}
