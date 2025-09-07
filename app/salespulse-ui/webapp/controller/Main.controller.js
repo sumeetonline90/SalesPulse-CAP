@@ -49,20 +49,39 @@ sap.ui.define([
             MessageToast.show("Uploading file...");
 
             try {
-                // Step 1: Read file content using FileReader
+                // Step 1: Fetch CSRF token first
+                const tokenResponse = await fetch('/sales-service/', {
+                    method: 'HEAD',
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+
+                if (!tokenResponse.ok) {
+                    throw new Error(`Failed to get CSRF token: ${tokenResponse.status}`);
+                }
+
+                const csrfToken = tokenResponse.headers.get('x-csrf-token');
+                if (!csrfToken) {
+                    throw new Error('CSRF token not received from server');
+                }
+
+                // Step 2: Read file content using FileReader
                 const base64Content = await this.readFileAsBase64(file);
 
-                // Step 2: Prepare request data
+                // Step 3: Prepare request data
                 const requestData = {
                     excel: base64Content
                 };
 
-                // Step 3: Make POST request - let the Application Router handle CSRF tokens
+                // Step 4: Make POST request with CSRF token
                 const uploadResponse = await fetch('/sales-service/uploadExcel', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'x-csrf-token': csrfToken
                     },
                     credentials: 'include', // Include cookies for authentication
                     body: JSON.stringify(requestData)
