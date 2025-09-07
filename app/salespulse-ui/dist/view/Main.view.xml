@@ -86,20 +86,29 @@
                     </layout:content>
                 </layout:Grid>
 
-                <!-- Sales Data Table Panel -->
-                <Panel class="sapUiResponsiveMargin">
-                    <headerToolbar>
-                        <Toolbar>
-                            <core:Icon src="sap-icon://table-view" size="1.5rem" color="#007bff"/>
-                            <Title text="Sales Orders Data" level="H3" class="sapUiSmallMarginBegin"/>
-                            <ToolbarSpacer/>
-                            <Button 
-                                icon="sap-icon://refresh"
-                                press="onRefresh"
-                                tooltip="Refresh Data"
-                                type="Transparent"/>
-                        </Toolbar>
-                    </headerToolbar>
+                <!-- Two-Column Layout for Table and Chart -->
+                <layout:Grid defaultSpan="XL6 L6 M12 S12" class="sapUiMediumMarginBottom">
+                    <layout:content>
+                        <!-- Left Column: Sales Data Table -->
+                        <Panel class="sapUiResponsiveMargin">
+                            <headerToolbar>
+                                <Toolbar>
+                                    <core:Icon src="sap-icon://table-view" size="1.5rem" color="#007bff"/>
+                                    <Title text="Sales Orders Data" level="H3" class="sapUiSmallMarginBegin"/>
+                                    <ToolbarSpacer/>
+                                    <Button 
+                                        icon="sap-icon://add"
+                                        press="onCreateOrder"
+                                        tooltip="Add New Order"
+                                        type="Emphasized"
+                                        class="sapUiTinyMarginEnd"/>
+                                    <Button 
+                                        icon="sap-icon://refresh"
+                                        press="onRefresh"
+                                        tooltip="Refresh Data"
+                                        type="Transparent"/>
+                                </Toolbar>
+                            </headerToolbar>
                     <content>
                         <Table 
                             id="salesTable"
@@ -126,6 +135,9 @@
                                 <Column>
                                     <Text text="Order Date" design="Bold"/>
                                 </Column>
+                                <Column>
+                                    <Text text="Actions" design="Bold"/>
+                                </Column>
                             </columns>
                             <items>
                                 <ColumnListItem>
@@ -139,11 +151,48 @@
                                         state="Success"
                                         emphasized="true"/>
                                     <Text text="{path: 'OrderDate', type: 'sap.ui.model.type.Date', formatOptions: { style: 'medium' }}"/>
+                                    <HBox justifyContent="End">
+                                        <Button 
+                                            icon="sap-icon://edit"
+                                            press="onEditOrder"
+                                            tooltip="Edit Order"
+                                            type="Transparent"
+                                            class="sapUiTinyMarginEnd"/>
+                                        <Button 
+                                            icon="sap-icon://delete"
+                                            press="onDeleteOrder"
+                                            tooltip="Delete Order"
+                                            type="Transparent"/>
+                                    </HBox>
                                 </ColumnListItem>
                             </items>
                         </Table>
                     </content>
-                </Panel>
+                        </Panel>
+                        
+                        <!-- Right Column: Geography Chart -->
+                        <Panel class="sapUiResponsiveMargin">
+                            <headerToolbar>
+                                <Toolbar>
+                                    <core:Icon src="sap-icon://pie-chart" size="1.5rem" color="#007bff"/>
+                                    <Title text="Geography Distribution" level="H3" class="sapUiSmallMarginBegin"/>
+                                    <ToolbarSpacer/>
+                                    <Button 
+                                        icon="sap-icon://refresh"
+                                        press="onRefreshChart"
+                                        tooltip="Refresh Chart"
+                                        type="Transparent"/>
+                                </Toolbar>
+                            </headerToolbar>
+                            <content>
+                                <VBox alignItems="Center" justifyContent="Center" class="sapUiLargeMargin">
+                                    <core:HTML id="pieChartContainer" 
+                                               content="&lt;div id='chartContainer' style='width: 100%; height: 300px;'&gt;&lt;/div&gt;"/>
+                                </VBox>
+                            </content>
+                        </Panel>
+                    </layout:content>
+                </layout:Grid>
             </VBox>
         </content>
     </Page>

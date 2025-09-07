@@ -59,17 +59,56 @@ module.exports = cds.service.impl(async function() {
                 return;
             }
 
-            // Clear existing data and insert new data in a transaction
-            await cds.tx(req).run([
-                DELETE.from(SalesOrders),
-                INSERT.into(SalesOrders).entries(validData)
-            ]);
+            // Check for existing records and only insert new ones
+            let newRecordsCount = 0;
+            let skippedRecordsCount = 0;
+            
+            for (const record of validData) {
+                // Check if record with this OrderID already exists
+                const existingRecord = await cds.tx(req).run(
+                    SELECT.one.from(SalesOrders).where({ OrderID: record.OrderID })
+                );
+                
+                if (!existingRecord) {
+                    // Insert new record
+                    await cds.tx(req).run(
+                        INSERT.into(SalesOrders).entries(record)
+                    );
+                    newRecordsCount++;
+                } else {
+                    skippedRecordsCount++;
+                }
+            }
 
-            return `Successfully uploaded ${validData.length} sales records`;
+            return `Upload completed: ${newRecordsCount} new records added, ${skippedRecordsCount} duplicates skipped`;
 
         } catch (error) {
             console.error('Error processing Excel upload:', error);
             req.error(500, `Error processing Excel file: ${error.message}`);
+        }
+    });
+
+    this.on('getGeographyData', async (req) => {
+        try {
+            // Get aggregated data by region and country
+            const geographyData = await cds.tx(req).run(
+                SELECT.from(SalesOrders)
+                    .columns('Region', 'Country')
+                    .columns('sum(Revenue) as totalRevenue', 'count(*) as recordCount')
+                    .groupBy('Region', 'Country')
+                    .orderBy('totalRevenue desc')
+            );
+
+            return geographyData.map(row => ({
+                region: row.Region,
+                country: row.Country,
+                totalRevenue: parseFloat(row.totalRevenue).toFixed(2),
+                recordCount: row.recordCount
+            }));
+
+        } catch (error) {
+            console.error('Error getting geography data:', error);
+            req.error(500, `Error getting geography data: ${error.message}`);
         }
     });
 

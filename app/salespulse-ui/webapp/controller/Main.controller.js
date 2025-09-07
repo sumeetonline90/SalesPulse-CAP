@@ -1,14 +1,24 @@
 sap.ui.define([
     "sap/ui/core/mvc/Controller",
     "sap/m/MessageToast",
-    "sap/ui/model/json/JSONModel"
-], (Controller, MessageToast, JSONModel) => {
+    "sap/m/MessageBox",
+    "sap/ui/model/json/JSONModel",
+    "sap/m/Dialog",
+    "sap/m/Button",
+    "sap/m/Input",
+    "sap/m/DatePicker",
+    "sap/m/Select",
+    "sap/ui/core/Item"
+], (Controller, MessageToast, MessageBox, JSONModel, Dialog, Button, Input, DatePicker, Select, Item) => {
     "use strict";
 
     return Controller.extend("com.sap.salespulse.salespulseui.controller.Main", {
         onInit() {
             // Initialize the model for the view
             this.getView().setModel(new JSONModel(), "viewModel");
+            
+            // Load chart data when the app starts
+            this.refreshChart();
         },
 
         onFileChange(oEvent) {
@@ -182,6 +192,213 @@ sap.ui.define([
             } catch (error) {
                 console.error('Error refreshing sales data:', error);
                 MessageToast.show("Error refreshing data: " + error.message);
+            }
+        },
+
+        // CRUD Operations
+        onCreateOrder() {
+            this._showOrderDialog();
+        },
+
+        onEditOrder(oEvent) {
+            const oBindingContext = oEvent.getSource().getBindingContext();
+            if (oBindingContext) {
+                const orderData = oBindingContext.getObject();
+                this._showOrderDialog(orderData);
+            }
+        },
+
+        onDeleteOrder(oEvent) {
+            const oBindingContext = oEvent.getSource().getBindingContext();
+            if (oBindingContext) {
+                const orderData = oBindingContext.getObject();
+                MessageBox.confirm(
+                    `Are you sure you want to delete order ${orderData.OrderID}?`,
+                    {
+                        title: "Delete Order",
+                        onClose: (oAction) => {
+                            if (oAction === MessageBox.Action.OK) {
+                                this._deleteOrder(orderData);
+                            }
+                        }
+                    }
+                );
+            }
+        },
+
+        _showOrderDialog(orderData = null) {
+            const isEdit = !!orderData;
+            const dialog = new Dialog({
+                title: isEdit ? "Edit Order" : "Create New Order",
+                contentWidth: "500px",
+                content: [
+                    new Input({
+                        id: "orderIdInput",
+                        placeholder: "Order ID",
+                        value: orderData?.OrderID || "",
+                        enabled: !isEdit
+                    }),
+                    new Input({
+                        id: "regionInput",
+                        placeholder: "Region",
+                        value: orderData?.Region || ""
+                    }),
+                    new Input({
+                        id: "countryInput",
+                        placeholder: "Country",
+                        value: orderData?.Country || ""
+                    }),
+                    new Input({
+                        id: "productInput",
+                        placeholder: "Product",
+                        value: orderData?.Product || ""
+                    }),
+                    new Input({
+                        id: "revenueInput",
+                        placeholder: "Revenue",
+                        value: orderData?.Revenue || "",
+                        type: "Number"
+                    }),
+                    new DatePicker({
+                        id: "orderDateInput",
+                        placeholder: "Order Date",
+                        value: orderData?.OrderDate || new Date()
+                    })
+                ],
+                beginButton: new Button({
+                    text: isEdit ? "Update" : "Create",
+                    type: "Emphasized",
+                    press: () => {
+                        this._saveOrder(orderData);
+                        dialog.close();
+                    }
+                }),
+                endButton: new Button({
+                    text: "Cancel",
+                    press: () => dialog.close()
+                })
+            });
+
+            dialog.open();
+        },
+
+        async _saveOrder(existingOrder) {
+            try {
+                const orderId = this.byId("orderIdInput").getValue();
+                const region = this.byId("regionInput").getValue();
+                const country = this.byId("countryInput").getValue();
+                const product = this.byId("productInput").getValue();
+                const revenue = parseFloat(this.byId("revenueInput").getValue());
+                const orderDate = this.byId("orderDateInput").getValue();
+
+                if (!orderId || !region || !country || !product || !revenue || !orderDate) {
+                    MessageToast.show("Please fill in all fields");
+                    return;
+                }
+
+                const orderData = {
+                    OrderID: orderId,
+                    Region: region,
+                    Country: country,
+                    Product: product,
+                    Revenue: revenue,
+                    OrderDate: orderDate
+                };
+
+                const oModel = this.getView().getModel();
+                if (existingOrder) {
+                    // Update existing order
+                    await oModel.update(`/SalesOrders(${existingOrder.ID})`, orderData);
+                    MessageToast.show("Order updated successfully");
+                } else {
+                    // Create new order
+                    await oModel.create("/SalesOrders", orderData);
+                    MessageToast.show("Order created successfully");
+                }
+
+                await this.refreshSalesData();
+                await this.refreshChart();
+
+            } catch (error) {
+                console.error('Error saving order:', error);
+                MessageToast.show("Error saving order: " + error.message);
+            }
+        },
+
+        async _deleteOrder(orderData) {
+            try {
+                const oModel = this.getView().getModel();
+                await oModel.remove(`/SalesOrders(${orderData.ID})`);
+                MessageToast.show("Order deleted successfully");
+                await this.refreshSalesData();
+                await this.refreshChart();
+            } catch (error) {
+                console.error('Error deleting order:', error);
+                MessageToast.show("Error deleting order: " + error.message);
+            }
+        },
+
+        // Chart Operations
+        async onRefreshChart() {
+            await this.refreshChart();
+        },
+
+        async refreshChart() {
+            try {
+                const oModel = this.getView().getModel();
+                const response = await oModel.callFunction("/getGeographyData");
+                
+                if (response && response.length > 0) {
+                    this._renderPieChart(response);
+                } else {
+                    this._showNoDataMessage();
+                }
+            } catch (error) {
+                console.error('Error refreshing chart:', error);
+                this._showNoDataMessage();
+            }
+        },
+
+        _renderPieChart(data) {
+            // Simple pie chart implementation using HTML/CSS/JS
+            const chartContainer = document.getElementById('chartContainer');
+            if (!chartContainer) return;
+
+            const totalRevenue = data.reduce((sum, item) => sum + parseFloat(item.totalRevenue), 0);
+            
+            let chartHTML = '<div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; height: 100%;">';
+            
+            data.forEach((item, index) => {
+                const percentage = ((parseFloat(item.totalRevenue) / totalRevenue) * 100).toFixed(1);
+                const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
+                const color = colors[index % colors.length];
+                
+                chartHTML += `
+                    <div style="display: flex; flex-direction: column; align-items: center; margin: 10px; padding: 15px; border-radius: 10px; background: ${color}20; border: 2px solid ${color}; min-width: 120px;">
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background: ${color}; margin-bottom: 8px;"></div>
+                        <div style="font-weight: bold; font-size: 14px; color: #333; text-align: center;">${item.region}</div>
+                        <div style="font-size: 12px; color: #666; text-align: center;">${item.country}</div>
+                        <div style="font-weight: bold; font-size: 16px; color: #333; margin-top: 5px;">$${item.totalRevenue}</div>
+                        <div style="font-size: 12px; color: #666;">${percentage}%</div>
+                        <div style="font-size: 10px; color: #888;">${item.recordCount} orders</div>
+                    </div>
+                `;
+            });
+            
+            chartHTML += '</div>';
+            chartContainer.innerHTML = chartHTML;
+        },
+
+        _showNoDataMessage() {
+            const chartContainer = document.getElementById('chartContainer');
+            if (chartContainer) {
+                chartContainer.innerHTML = `
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #666;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+                        <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">No Data Available</div>
+                        <div style="font-size: 14px; text-align: center;">Upload some sales data to see the geography distribution chart</div>
+                    </div>
+                `;
             }
         }
     });
