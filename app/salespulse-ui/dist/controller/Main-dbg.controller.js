@@ -31,14 +31,14 @@ sap.ui.define([
             const fileUploader = this.byId("fileUploader");
             const domRef = fileUploader.getDomRef();
             const fileInput = domRef.querySelector('input[type="file"]');
-            
+
             if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
                 MessageToast.show("Please select a file first");
                 return;
             }
 
             const file = fileInput.files[0];
-            
+
             // Validate file type
             if (!file.name.toLowerCase().endsWith('.xlsx')) {
                 MessageToast.show("Please select an Excel file (.xlsx)");
@@ -47,61 +47,45 @@ sap.ui.define([
 
             // Show loading state
             MessageToast.show("Uploading file...");
-            
+
             try {
-                // Step 1: Fetch CSRF token first
-                const tokenResponse = await fetch('/sales-service/', {
-                    method: 'HEAD',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-                
-                if (!tokenResponse.ok) {
-                    throw new Error(`Failed to get CSRF token: ${tokenResponse.status}`);
-                }
-                
-                const csrfToken = tokenResponse.headers.get('x-csrf-token');
-                if (!csrfToken) {
-                    throw new Error('CSRF token not received from server');
-                }
-                
-                // Step 2: Read file content using FileReader
+                // Step 1: Read file content using FileReader
                 const base64Content = await this.readFileAsBase64(file);
-                
-                // Step 3: Prepare request data
+
+                // Step 2: Prepare request data
                 const requestData = {
                     excel: base64Content
                 };
 
-                // Step 4: Make POST request with CSRF token
+                // Step 3: Make POST request - let the Application Router handle CSRF tokens
                 const uploadResponse = await fetch('/sales-service/uploadExcel', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'x-csrf-token': csrfToken
+                        'X-Requested-With': 'XMLHttpRequest'
                     },
+                    credentials: 'include', // Include cookies for authentication
                     body: JSON.stringify(requestData)
                 });
-                
+
                 if (!uploadResponse.ok) {
                     const errorText = await uploadResponse.text();
                     throw new Error(errorText || 'Upload failed');
                 }
-                
+
                 const result = await uploadResponse.json();
-                
+
                 // Handle the response properly - CAP actions return JSON with the result
                 const message = result.value || result || "File uploaded successfully!";
                 MessageToast.show(message);
-                
+
                 // Refresh the table data
                 this.onRefresh();
-                
+
                 // Reset file uploader
                 fileUploader.clear();
                 this.byId("uploadButton").setEnabled(false);
-                
+
             } catch (error) {
                 console.error('Upload error:', error);
                 MessageToast.show("Upload failed: " + error.message);
