@@ -27,7 +27,14 @@ sap.ui.define([
             }
         },
 
-               async onUpload() {
+               async onUpload(oEvent) {
+                   // Prevent any default form submission behavior
+                   if (oEvent && oEvent.preventDefault) {
+                       oEvent.preventDefault();
+                   }
+                   if (oEvent && oEvent.stopPropagation) {
+                       oEvent.stopPropagation();
+                   }
                    const fileUploader = this.byId("fileUploader");
                    const domRef = fileUploader.getDomRef();
                    const fileInput = domRef.querySelector('input[type="file"]');
@@ -86,8 +93,16 @@ sap.ui.define([
                        const message = result.value || result || "File uploaded successfully!";
                        MessageToast.show(message);
 
-                       // Refresh the table data
-                       this.onRefresh();
+                       // Clear the table immediately to show that old data is being replaced
+                       const salesTable = this.byId("salesTable");
+                       if (salesTable) {
+                           salesTable.removeAllItems();
+                       }
+
+                       // Refresh the table data with a small delay to ensure backend processing is complete
+                       setTimeout(() => {
+                           this.refreshSalesData();
+                       }, 1500);
 
                        // Reset file uploader
                        fileUploader.clear();
@@ -119,13 +134,6 @@ sap.ui.define([
             });
         },
 
-        onUploadComplete(oEvent) {
-            const response = oEvent.getParameter("response");
-            if (response) {
-                MessageToast.show("Upload completed: " + response);
-                this.onRefresh();
-            }
-        },
 
         onTypeMissmatch(oEvent) {
             MessageToast.show("Please select an Excel file (.xlsx)");
@@ -144,6 +152,36 @@ sap.ui.define([
                     oModel.refresh(true);
                     MessageToast.show("Model refreshed");
                 }
+            }
+        },
+
+        async refreshSalesData() {
+            try {
+                const oModel = this.getView().getModel();
+                const salesTable = this.byId("salesTable");
+                
+                if (oModel && salesTable) {
+                    // Clear any existing data in the table first
+                    salesTable.removeAllItems();
+                    
+                    // Refresh the OData model without parameters
+                    await oModel.refresh();
+                    
+                    // Get the binding and refresh it
+                    const binding = salesTable.getBinding("items");
+                    if (binding) {
+                        // Refresh the binding without parameters
+                        binding.refresh();
+                        
+                        // Data will be loaded automatically by the binding refresh
+                        // No need to show additional messages as the table will display the data
+                    }
+                } else {
+                    MessageToast.show("Error: Unable to refresh data - model or table not found");
+                }
+            } catch (error) {
+                console.error('Error refreshing sales data:', error);
+                MessageToast.show("Error refreshing data: " + error.message);
             }
         }
     });

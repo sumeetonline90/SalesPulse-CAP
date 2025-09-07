@@ -64,9 +64,7 @@
                                     <unified:FileUploader 
                                         id="fileUploader"
                                         name="excelFile"
-                                        uploadUrl="/sales-service/uploadExcel"
                                         tooltip="Upload your Excel file here"
-                                        uploadComplete="onUploadComplete"
                                         change="onFileChange"
                                         typeMissmatch="onTypeMissmatch"
                                         style="Emphasized"
