@@ -49,52 +49,33 @@ sap.ui.define([
             MessageToast.show("Uploading file...");
 
             try {
-                // Step 1: Fetch CSRF token first
-                const tokenResponse = await fetch('/sales-service/', {
-                    method: 'HEAD',
-                    headers: {
-                        'Accept': 'application/json'
-                    },
-                    credentials: 'include'
-                });
-
-                if (!tokenResponse.ok) {
-                    throw new Error(`Failed to get CSRF token: ${tokenResponse.status}`);
+                // Get the OData model from the view
+                const oModel = this.getView().getModel();
+                
+                if (!oModel) {
+                    throw new Error('OData model not found');
                 }
 
-                const csrfToken = tokenResponse.headers.get('x-csrf-token');
-                if (!csrfToken) {
-                    throw new Error('CSRF token not received from server');
-                }
-
-                // Step 2: Read file content using FileReader
+                // Read file content using FileReader
                 const base64Content = await this.readFileAsBase64(file);
 
-                // Step 3: Prepare request data
-                const requestData = {
-                    excel: base64Content
-                };
+                // Use SAPUI5 OData model to call the action
+                // This automatically handles CSRF tokens and authentication
+                const oContext = oModel.bindContext("/uploadExcel(...)", oModel);
+                
+                // Set the parameters for the action
+                oContext.setParameter("excel", base64Content);
 
-                // Step 4: Make POST request with CSRF token
-                const uploadResponse = await fetch('/sales-service/uploadExcel', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'x-csrf-token': csrfToken
-                    },
-                    credentials: 'include', // Include cookies for authentication
-                    body: JSON.stringify(requestData)
+                // Execute the action
+                const result = await new Promise((resolve, reject) => {
+                    oContext.execute().then((response) => {
+                        resolve(response);
+                    }).catch((error) => {
+                        reject(error);
+                    });
                 });
 
-                if (!uploadResponse.ok) {
-                    const errorText = await uploadResponse.text();
-                    throw new Error(errorText || 'Upload failed');
-                }
-
-                const result = await uploadResponse.json();
-
-                // Handle the response properly - CAP actions return JSON with the result
+                // Handle the response
                 const message = result.value || result || "File uploaded successfully!";
                 MessageToast.show(message);
 
