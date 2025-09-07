@@ -22,7 +22,7 @@
     },
     "dataSources": {
       "mainService": {
-        "uri": "/sales-service/",
+        "uri": "https://innovalaisandbox-sandbox-salespulse-cap-srv.cfapps.in30.hana.ondemand.com/sales-service/",
         "type": "OData",
         "settings": {
           "annotations": [],

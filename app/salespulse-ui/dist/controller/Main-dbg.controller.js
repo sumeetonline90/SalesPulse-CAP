@@ -52,15 +52,13 @@ sap.ui.define([
                        // Read file content using FileReader
                        const base64Content = await this.readFileAsBase64(file);
 
-                       // Use direct fetch with proper authentication headers
-                       const response = await fetch('/sales-service/uploadExcel', {
+                       // Use direct fetch to backend service with CORS headers
+                       const response = await fetch('https://innovalaisandbox-sandbox-salespulse-cap-srv.cfapps.in30.hana.ondemand.com/sales-service/uploadExcel', {
                            method: 'POST',
                            headers: {
                                'Content-Type': 'application/json',
-                               'Accept': 'application/json',
-                               'X-Requested-With': 'XMLHttpRequest'
+                               'Accept': 'application/json'
                            },
-                           credentials: 'include',
                            body: JSON.stringify({
                                excel: base64Content
                            })

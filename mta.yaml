@@ -36,22 +36,18 @@ modules:
       - name: salespulse-cap-db
 
   - name: salespulse-cap-ui
-    type: approuter.nodejs
+    type: html5
     path: app/salespulse-ui
     parameters:
       disk-quota: 256M
       memory: 256M
+      buildpack: staticfile_buildpack
     build-parameters:
       builder: custom
       commands:
         - npm ci
         - npm run build
     requires:
-      - name: srv-api
-        group: destinations
-        properties:
-          name: srv-api
-          url: ~{srv-url}
       - name: salespulse-cap-uaa
 
 resources:

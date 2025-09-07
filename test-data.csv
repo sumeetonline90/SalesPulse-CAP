@@ -1,0 +1,4 @@
+﻿OrderID,Region,Country,Product,Revenue,OrderDate
+ORD001,North America,USA,Laptop,1500.00,2024-01-15
+ORD002,Europe,Germany,Phone,800.00,2024-01-16
+ORD003,Asia,Japan,Tablet,600.00,2024-01-17

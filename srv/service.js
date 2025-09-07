@@ -2,6 +2,18 @@ const cds = require('@sap/cds');
 const xlsx = require('xlsx');
 
 module.exports = cds.service.impl(async function() {
+    // Add CORS headers for cross-origin requests
+    this.before('*', (req) => {
+        req.res.setHeader('Access-Control-Allow-Origin', '*');
+        req.res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        req.res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+        
+        // Handle preflight requests
+        if (req.method === 'OPTIONS') {
+            req.res.status(200).end();
+            return false;
+        }
+    });
     const { SalesOrders } = this.entities;
 
     this.on('uploadExcel', async (req) => {

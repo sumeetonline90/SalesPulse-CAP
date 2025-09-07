@@ -8,16 +8,12 @@
     "sapui5"
   ],
   "main": "webapp/index.html",
-  "dependencies": {
-    "@sap/approuter": "^12.0.0"
-  },
   "devDependencies": {
     "@ui5/cli": "^4.0.16",
     "@sap/ux-ui5-tooling": "1"
   },
   "scripts": {
     "build": "ui5 build --clean-dest --include-task=generateCachebusterInfo",
-    "start": "cd dist && node ../node_modules/@sap/approuter/approuter.js",
     "deploy-config": "npx -p @sap/ux-ui5-tooling fiori add deploy-config cf"
   }
 }
