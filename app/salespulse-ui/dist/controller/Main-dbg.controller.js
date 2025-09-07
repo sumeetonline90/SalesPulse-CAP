@@ -17,7 +17,8 @@ sap.ui.define([
             // Initialize the model for the view
             this.getView().setModel(new JSONModel(), "viewModel");
             
-            // Load chart data when the app starts
+            // Load initial data when the app starts
+            this.refreshSalesData();
             this.refreshChart();
         },
 
@@ -150,18 +151,22 @@ sap.ui.define([
         },
 
         onRefresh() {
-            const salesTable = this.byId("salesTable");
-            const binding = salesTable.getBinding("items");
-            if (binding) {
-                binding.refresh();
-                MessageToast.show("Data refreshed");
-            } else {
-                // If no binding exists, try to refresh the model
+            this.refreshSalesData();
+        },
+
+        async onAddSampleData() {
+            try {
                 const oModel = this.getView().getModel();
-                if (oModel) {
-                    oModel.refresh(true);
-                    MessageToast.show("Model refreshed");
+                const response = await oModel.callFunction("/addSampleData");
+                
+                if (response) {
+                    MessageToast.show(response);
+                    await this.refreshSalesData();
+                    await this.refreshChart();
                 }
+            } catch (error) {
+                console.error('Error adding sample data:', error);
+                MessageToast.show("Error adding sample data: " + error.message);
             }
         },
 

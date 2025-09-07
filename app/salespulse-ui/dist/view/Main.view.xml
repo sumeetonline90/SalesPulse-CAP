@@ -103,6 +103,12 @@
                                         type="Emphasized"
                                         class="sapUiTinyMarginEnd"/>
                                     <Button 
+                                        icon="sap-icon://database"
+                                        press="onAddSampleData"
+                                        tooltip="Add Sample Data"
+                                        type="Accept"
+                                        class="sapUiTinyMarginEnd"/>
+                                    <Button 
                                         icon="sap-icon://refresh"
                                         press="onRefresh"
                                         tooltip="Refresh Data"

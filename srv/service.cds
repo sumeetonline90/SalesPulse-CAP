@@ -5,6 +5,7 @@ service SalesService @(path: '/odata/v4/sales-service') {
     
     action uploadExcel(excel: String) returns String;
     action getGeographyData() returns array of GeographyData;
+    action addSampleData() returns String;
 }
 
 type GeographyData {

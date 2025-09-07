@@ -10,3 +10,14 @@ entity SalesOrders : cuid, managed {
     Revenue    : Decimal(15,2) @title: 'Revenue';
     OrderDate  : Date @title: 'Order Date';
 }
+
+// Sample data for testing
+@cds.persistence.skip
+entity SalesOrdersSample {
+    OrderID    : String(50);
+    Region     : String(100);
+    Country    : String(100);
+    Product    : String(255);
+    Revenue    : Decimal(15,2);
+    OrderDate  : Date;
+}

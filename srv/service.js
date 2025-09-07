@@ -112,6 +112,80 @@ module.exports = cds.service.impl(async function() {
         }
     });
 
+    this.on('addSampleData', async (req) => {
+        try {
+            const sampleData = [
+                {
+                    OrderID: "ORD001",
+                    Region: "North America",
+                    Country: "USA",
+                    Product: "Laptop",
+                    Revenue: 1500.00,
+                    OrderDate: new Date("2024-01-15")
+                },
+                {
+                    OrderID: "ORD002",
+                    Region: "Europe",
+                    Country: "Germany",
+                    Product: "Smartphone",
+                    Revenue: 800.00,
+                    OrderDate: new Date("2024-01-16")
+                },
+                {
+                    OrderID: "ORD003",
+                    Region: "Asia",
+                    Country: "Japan",
+                    Product: "Tablet",
+                    Revenue: 600.00,
+                    OrderDate: new Date("2024-01-17")
+                },
+                {
+                    OrderID: "ORD004",
+                    Region: "North America",
+                    Country: "Canada",
+                    Product: "Desktop",
+                    Revenue: 1200.00,
+                    OrderDate: new Date("2024-01-18")
+                },
+                {
+                    OrderID: "ORD005",
+                    Region: "Europe",
+                    Country: "France",
+                    Product: "Monitor",
+                    Revenue: 300.00,
+                    OrderDate: new Date("2024-01-19")
+                }
+            ];
+
+            // Check for existing records and only insert new ones
+            let newRecordsCount = 0;
+            let skippedRecordsCount = 0;
+            
+            for (const record of sampleData) {
+                // Check if record with this OrderID already exists
+                const existingRecord = await cds.tx(req).run(
+                    SELECT.one.from(SalesOrders).where({ OrderID: record.OrderID })
+                );
+                
+                if (!existingRecord) {
+                    // Insert new record
+                    await cds.tx(req).run(
+                        INSERT.into(SalesOrders).entries(record)
+                    );
+                    newRecordsCount++;
+                } else {
+                    skippedRecordsCount++;
+                }
+            }
+
+            return `Sample data added: ${newRecordsCount} new records, ${skippedRecordsCount} duplicates skipped`;
+
+        } catch (error) {
+            console.error('Error adding sample data:', error);
+            req.error(500, `Error adding sample data: ${error.message}`);
+        }
+    });
+
     // Add some basic CRUD events for better error handling
     this.before('CREATE', SalesOrders, (req) => {
         // Validate revenue is positive

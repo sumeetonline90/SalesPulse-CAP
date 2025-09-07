@@ -1,0 +1,11 @@
+OrderID,Region,Country,Product,Revenue,OrderDate
+ORD001,North America,USA,Laptop,1500.00,2024-01-15
+ORD002,Europe,Germany,Smartphone,800.00,2024-01-16
+ORD003,Asia,Japan,Tablet,600.00,2024-01-17
+ORD004,North America,Canada,Desktop,1200.00,2024-01-18
+ORD005,Europe,France,Monitor,300.00,2024-01-19
+ORD006,Asia,China,Keyboard,50.00,2024-01-20
+ORD007,North America,Mexico,Mouse,25.00,2024-01-21
+ORD008,Europe,UK,Headphones,150.00,2024-01-22
+ORD009,Asia,India,Webcam,100.00,2024-01-23
+ORD010,North America,USA,Printer,400.00,2024-01-24
