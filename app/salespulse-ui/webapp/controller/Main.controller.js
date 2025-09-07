@@ -153,12 +153,27 @@ sap.ui.define([
 
         async onAddSampleData() {
             try {
-                const oModel = this.getView().getModel();
-                const oContext = oModel.bindContext("/addSampleData(...)");
-                const response = await oContext.execute();
+                // OData V4 Action call - POST to action endpoint
+                const response = await fetch('/odata/v4/sales-service/addSampleData', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({}) // Empty body for action call
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const result = await response.json();
+                const message = result.value || result;
                 
-                if (response) {
-                    MessageToast.show(response);
+                if (message) {
+                    MessageToast.show(message);
                     await this.refreshSalesData();
                     await this.refreshChart();
                 }
@@ -171,14 +186,14 @@ sap.ui.define([
         async refreshSalesData() {
             try {
                 const oModel = this.getView().getModel();
-                const salesTable = this.byId("salesTable");
+            const salesTable = this.byId("salesTable");
                 
                 if (oModel && salesTable) {
                     // Get the binding and refresh it without clearing the table
-                    const binding = salesTable.getBinding("items");
-                    if (binding) {
+            const binding = salesTable.getBinding("items");
+            if (binding) {
                         // Refresh the binding to reload data from server
-                        binding.refresh();
+                binding.refresh();
                     } else {
                         // If no binding exists, create one
                         salesTable.bindItems({
@@ -268,14 +283,22 @@ sap.ui.define([
                 beginButton: new Button({
                     text: isEdit ? "Update" : "Create",
                     type: "Emphasized",
-                    press: () => {
-                        this._saveOrder(orderData);
-                        dialog.close();
+                    press: async () => {
+                        try {
+                            await this._saveOrder(orderData);
+                            dialog.close();
+                            dialog.destroy();
+                        } catch (error) {
+                            console.error('Error in dialog save:', error);
+                        }
                     }
                 }),
                 endButton: new Button({
                     text: "Cancel",
-                    press: () => dialog.close()
+                    press: () => {
+                        dialog.close();
+                        dialog.destroy();
+                    }
                 })
             });
 
@@ -296,6 +319,7 @@ sap.ui.define([
                     return;
                 }
 
+                // Format order data according to OData V4 standards
                 const orderData = {
                     OrderID: orderId,
                     Region: region,
@@ -305,30 +329,41 @@ sap.ui.define([
                     OrderDate: orderDate
                 };
 
-                const oModel = this.getView().getModel();
                 if (existingOrder) {
-                    // Update existing order using OData V4 API
-                    const oContext = existingOrder;
-                    oContext.setProperty("OrderID", orderId);
-                    oContext.setProperty("Region", region);
-                    oContext.setProperty("Country", country);
-                    oContext.setProperty("Product", product);
-                    oContext.setProperty("Revenue", revenue);
-                    oContext.setProperty("OrderDate", orderDate);
-                    
-                    await oModel.submitChanges();
+                    // UPDATE operation - OData V4 PATCH method
+                    const response = await fetch(`/odata/v4/sales-service/SalesOrders(${existingOrder.ID})`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify(orderData)
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`HTTP ${response.status}: ${errorText}`);
+                    }
+
                     MessageToast.show("Order updated successfully");
                 } else {
-                    // Create new order using OData V4 API
-                    const oContext = oModel.bindContext("/SalesOrders", null);
-                    oContext.setProperty("OrderID", orderId);
-                    oContext.setProperty("Region", region);
-                    oContext.setProperty("Country", country);
-                    oContext.setProperty("Product", product);
-                    oContext.setProperty("Revenue", revenue);
-                    oContext.setProperty("OrderDate", orderDate);
-                    
-                    await oModel.submitChanges();
+                    // CREATE operation - OData V4 POST method
+                    const response = await fetch('/odata/v4/sales-service/SalesOrders', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify(orderData)
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`HTTP ${response.status}: ${errorText}`);
+                    }
+
                     MessageToast.show("Order created successfully");
                 }
 
@@ -343,26 +378,24 @@ sap.ui.define([
 
         async _deleteOrder(orderData) {
             try {
-                const oModel = this.getView().getModel();
-                const salesTable = this.byId("salesTable");
-                const binding = salesTable.getBinding("items");
-                
-                // Find the context for the order to delete
-                const contexts = binding.getContexts();
-                const contextToDelete = contexts.find(context => {
-                    const data = context.getObject();
-                    return data.OrderID === orderData.OrderID;
+                // DELETE operation - OData V4 DELETE method
+                const response = await fetch(`/odata/v4/sales-service/SalesOrders(${orderData.ID})`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include'
                 });
-                
-                if (contextToDelete) {
-                    contextToDelete.delete();
-                    await oModel.submitChanges();
-                    MessageToast.show("Order deleted successfully");
-                    await this.refreshSalesData();
-                    await this.refreshChart();
-                } else {
-                    MessageToast.show("Order not found for deletion");
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
+
+                MessageToast.show("Order deleted successfully");
+                await this.refreshSalesData();
+                await this.refreshChart();
+                
             } catch (error) {
                 console.error('Error deleting order:', error);
                 MessageToast.show("Error deleting order: " + error.message);
@@ -376,13 +409,28 @@ sap.ui.define([
 
         async refreshChart() {
             try {
-                const oModel = this.getView().getModel();
-                const oContext = oModel.bindContext("/getGeographyData(...)");
-                const response = await oContext.execute();
+                // OData V4 Action call - POST to action endpoint
+                const response = await fetch('/odata/v4/sales-service/getGeographyData', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({}) // Empty body for action call
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const result = await response.json();
+                const data = result.value || result;
                 
-                if (response && response.length > 0) {
-                    this._renderPieChart(response);
-                } else {
+                if (data && data.length > 0) {
+                    this._renderPieChart(data);
+            } else {
                     this._showNoDataMessage();
                 }
             } catch (error) {
