@@ -27,70 +27,65 @@ sap.ui.define([
             }
         },
 
-        async onUpload() {
-            const fileUploader = this.byId("fileUploader");
-            const domRef = fileUploader.getDomRef();
-            const fileInput = domRef.querySelector('input[type="file"]');
+               async onUpload() {
+                   const fileUploader = this.byId("fileUploader");
+                   const domRef = fileUploader.getDomRef();
+                   const fileInput = domRef.querySelector('input[type="file"]');
 
-            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-                MessageToast.show("Please select a file first");
-                return;
-            }
+                   if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                       MessageToast.show("Please select a file first");
+                       return;
+                   }
 
-            const file = fileInput.files[0];
+                   const file = fileInput.files[0];
 
-            // Validate file type
-            if (!file.name.toLowerCase().endsWith('.xlsx')) {
-                MessageToast.show("Please select an Excel file (.xlsx)");
-                return;
-            }
+                   // Validate file type
+                   if (!file.name.toLowerCase().endsWith('.xlsx')) {
+                       MessageToast.show("Please select an Excel file (.xlsx)");
+                       return;
+                   }
 
-            // Show loading state
-            MessageToast.show("Uploading file...");
+                   // Show loading state
+                   MessageToast.show("Uploading file...");
 
-            try {
-                // Get the OData model from the view
-                const oModel = this.getView().getModel();
-                
-                if (!oModel) {
-                    throw new Error('OData model not found');
-                }
+                   try {
+                       // Read file content using FileReader
+                       const base64Content = await this.readFileAsBase64(file);
 
-                // Read file content using FileReader
-                const base64Content = await this.readFileAsBase64(file);
+                       // Use direct fetch with proper authentication headers
+                       const response = await fetch('/sales-service/uploadExcel', {
+                           method: 'POST',
+                           headers: {
+                               'Content-Type': 'application/json',
+                               'Accept': 'application/json',
+                               'X-Requested-With': 'XMLHttpRequest'
+                           },
+                           credentials: 'include',
+                           body: JSON.stringify({
+                               excel: base64Content
+                           })
+                       });
 
-                // Use SAPUI5 OData model to call the action
-                // This automatically handles CSRF tokens and authentication
-                const oContext = oModel.bindContext("/uploadExcel(...)", oModel);
-                
-                // Set the parameters for the action
-                oContext.setParameter("excel", base64Content);
+                       if (!response.ok) {
+                           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                       }
 
-                // Execute the action
-                const result = await new Promise((resolve, reject) => {
-                    oContext.execute().then((response) => {
-                        resolve(response);
-                    }).catch((error) => {
-                        reject(error);
-                    });
-                });
+                       const result = await response.json();
+                       const message = result.value || result || "File uploaded successfully!";
+                       MessageToast.show(message);
 
-                // Handle the response
-                const message = result.value || result || "File uploaded successfully!";
-                MessageToast.show(message);
+                       // Refresh the table data
+                       this.onRefresh();
 
-                // Refresh the table data
-                this.onRefresh();
+                       // Reset file uploader
+                       fileUploader.clear();
+                       this.byId("uploadButton").setEnabled(false);
 
-                // Reset file uploader
-                fileUploader.clear();
-                this.byId("uploadButton").setEnabled(false);
-
-            } catch (error) {
-                console.error('Upload error:', error);
-                MessageToast.show("Upload failed: " + error.message);
-            }
-        },
+                   } catch (error) {
+                       console.error('Upload error:', error);
+                       MessageToast.show("Upload failed: " + error.message);
+                   }
+               },
 
         readFileAsBase64(file) {
             return new Promise((resolve, reject) => {
