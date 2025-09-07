@@ -25,6 +25,7 @@ modules:
           srv-url: ${default-url}
     requires:
       - name: salespulse-cap-db
+      - name: salespulse-cap-uaa
 
   - name: salespulse-cap-db-deployer
     type: hdb
@@ -34,9 +35,52 @@ modules:
     requires:
       - name: salespulse-cap-db
 
+  - name: salespulse-cap-ui
+    type: approuter.nodejs
+    path: app/salespulse-ui
+    parameters:
+      disk-quota: 256M
+      memory: 256M
+    build-parameters:
+      builder: custom
+      commands:
+        - npm ci
+        - npm run build
+    requires:
+      - name: srv-api
+        group: destinations
+        properties:
+          name: srv-api
+          url: ~{srv-url}
+      - name: salespulse-cap-uaa
+
 resources:
   - name: salespulse-cap-db
     type: com.sap.xs.hdi-container
     parameters:
       service: hana
       service-plan: hdi-shared
+  - name: salespulse-cap-uaa
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      config:
+        xsappname: SalesPulse
+        tenant-mode: dedicated
+        description: Security profile for SalesPulse App
+        scopes:
+          - name: $XSAPPNAME.User
+            description: Basic user access
+          - name: $XSAPPNAME.Admin
+            description: Administrative access
+        role-templates:
+          - name: User
+            description: Role for basic application access
+            scope-references:
+              - $XSAPPNAME.User
+          - name: Admin
+            description: Role for administrative access
+            scope-references:
+              - $XSAPPNAME.User
+              - $XSAPPNAME.Admin

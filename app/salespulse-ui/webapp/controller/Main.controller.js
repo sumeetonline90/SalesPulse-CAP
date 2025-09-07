@@ -27,7 +27,7 @@ sap.ui.define([
             }
         },
 
-        onUpload() {
+        async onUpload() {
             const fileUploader = this.byId("fileUploader");
             const domRef = fileUploader.getDomRef();
             const fileInput = domRef.querySelector('input[type="file"]');
@@ -48,60 +48,84 @@ sap.ui.define([
             // Show loading state
             MessageToast.show("Uploading file...");
             
-            // Read file content using FileReader
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    // Convert file content to base64
-                    const base64Content = e.target.result.split(',')[1];
-                    
-                    // Prepare request data
-                    const requestData = {
-                        excel: base64Content
-                    };
-
-                    // Make POST request to uploadExcel action
-                    fetch('/sales-service/uploadExcel', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(requestData)
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            return response.text().then(text => {
-                                throw new Error(text || 'Upload failed');
-                            });
-                        }
-                        return response.json();
-                    })
-                    .then(result => {
-                        // Handle the response properly - CAP actions return JSON with the result
-                        const message = result.value || result || "File uploaded successfully!";
-                        MessageToast.show(message);
-                        // Refresh the table data
-                        this.onRefresh();
-                        // Reset file uploader
-                        fileUploader.clear();
-                        this.byId("uploadButton").setEnabled(false);
-                    })
-                    .catch(error => {
-                        console.error('Upload error:', error);
-                        MessageToast.show("Upload failed: " + error.message);
-                    });
-                } catch (error) {
-                    console.error('File processing error:', error);
-                    MessageToast.show("Error processing file: " + error.message);
+            try {
+                // Step 1: Fetch CSRF token first
+                const tokenResponse = await fetch('/odata/v4/sales-service/', {
+                    method: 'HEAD',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!tokenResponse.ok) {
+                    throw new Error(`Failed to get CSRF token: ${tokenResponse.status}`);
                 }
-            };
+                
+                const csrfToken = tokenResponse.headers.get('x-csrf-token');
+                if (!csrfToken) {
+                    throw new Error('CSRF token not received from server');
+                }
+                
+                // Step 2: Read file content using FileReader
+                const base64Content = await this.readFileAsBase64(file);
+                
+                // Step 3: Prepare request data
+                const requestData = {
+                    excel: base64Content
+                };
 
-            reader.onerror = () => {
-                MessageToast.show("Error reading file");
-            };
+                // Step 4: Make POST request with CSRF token
+                const uploadResponse = await fetch('/odata/v4/sales-service/uploadExcel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-csrf-token': csrfToken
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (!uploadResponse.ok) {
+                    const errorText = await uploadResponse.text();
+                    throw new Error(errorText || 'Upload failed');
+                }
+                
+                const result = await uploadResponse.json();
+                
+                // Handle the response properly - CAP actions return JSON with the result
+                const message = result.value || result || "File uploaded successfully!";
+                MessageToast.show(message);
+                
+                // Refresh the table data
+                this.onRefresh();
+                
+                // Reset file uploader
+                fileUploader.clear();
+                this.byId("uploadButton").setEnabled(false);
+                
+            } catch (error) {
+                console.error('Upload error:', error);
+                MessageToast.show("Upload failed: " + error.message);
+            }
+        },
 
-            // Read file as data URL (base64)
-            reader.readAsDataURL(file);
+        readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        // Convert file content to base64
+                        const base64Content = e.target.result.split(',')[1];
+                        resolve(base64Content);
+                    } catch (error) {
+                        reject(new Error('Error processing file: ' + error.message));
+                    }
+                };
+                reader.onerror = () => {
+                    reject(new Error('Error reading file'));
+                };
+                // Read file as data URL (base64)
+                reader.readAsDataURL(file);
+            });
         },
 
         onUploadComplete(oEvent) {

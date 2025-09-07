@@ -1,0 +1,2 @@
+sap.ui.define(["sap/ui/core/UIComponent","com/sap/salespulse/salespulseui/model/models"],(e,s)=>{"use strict";return e.extend("com.sap.salespulse.salespulseui.Component",{metadata:{manifest:"json",interfaces:["sap.ui.core.IAsyncContentCreation"]},init(){e.prototype.init.apply(this,arguments);this.setModel(s.createDeviceModel(),"device");this.getRouter().initialize()}})});
+//# sourceMappingURL=Component.js.map

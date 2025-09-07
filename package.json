@@ -6,9 +6,10 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "@sap/cds": "^9",
     "@cap-js/hana": "^2",
     "@cap-js/sqlite": "^2",
+    "@sap/cds": "^9",
+    "@sap/xssec": "^4",
     "express": "^4",
     "xlsx": "^0.18.5"
   },
