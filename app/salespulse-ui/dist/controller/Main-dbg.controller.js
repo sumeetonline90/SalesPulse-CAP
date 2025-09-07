@@ -17,9 +17,11 @@ sap.ui.define([
             // Initialize the model for the view
             this.getView().setModel(new JSONModel(), "viewModel");
             
-            // Load initial data when the app starts
-            this.refreshSalesData();
-            this.refreshChart();
+            // Load initial data when the app starts with a small delay to ensure model is ready
+            setTimeout(() => {
+                this.refreshSalesData();
+                this.refreshChart();
+            }, 1000);
         },
 
         onFileChange(oEvent) {
@@ -104,15 +106,10 @@ sap.ui.define([
                        const message = result.value || result || "File uploaded successfully!";
                        MessageToast.show(message);
 
-                       // Clear the table immediately to show that old data is being replaced
-                       const salesTable = this.byId("salesTable");
-                       if (salesTable) {
-                           salesTable.removeAllItems();
-                       }
-
                        // Refresh the table data with a small delay to ensure backend processing is complete
                        setTimeout(() => {
                            this.refreshSalesData();
+                           this.refreshChart();
                        }, 1500);
 
                        // Reset file uploader
@@ -157,7 +154,8 @@ sap.ui.define([
         async onAddSampleData() {
             try {
                 const oModel = this.getView().getModel();
-                const response = await oModel.callFunction("/addSampleData");
+                const oContext = oModel.bindContext("/addSampleData(...)");
+                const response = await oContext.execute();
                 
                 if (response) {
                     MessageToast.show(response);
@@ -176,20 +174,17 @@ sap.ui.define([
                 const salesTable = this.byId("salesTable");
                 
                 if (oModel && salesTable) {
-                    // Clear any existing data in the table first
-                    salesTable.removeAllItems();
-                    
-                    // Refresh the OData model without parameters
-                    await oModel.refresh();
-                    
-                    // Get the binding and refresh it
+                    // Get the binding and refresh it without clearing the table
                     const binding = salesTable.getBinding("items");
                     if (binding) {
-                        // Refresh the binding without parameters
+                        // Refresh the binding to reload data from server
                         binding.refresh();
-                        
-                        // Data will be loaded automatically by the binding refresh
-                        // No need to show additional messages as the table will display the data
+                    } else {
+                        // If no binding exists, create one
+                        salesTable.bindItems({
+                            path: "/SalesOrders",
+                            template: salesTable.getBindingInfo("items").template
+                        });
                     }
                 } else {
                     MessageToast.show("Error: Unable to refresh data - model or table not found");
@@ -312,12 +307,28 @@ sap.ui.define([
 
                 const oModel = this.getView().getModel();
                 if (existingOrder) {
-                    // Update existing order
-                    await oModel.update(`/SalesOrders(${existingOrder.ID})`, orderData);
+                    // Update existing order using OData V4 API
+                    const oContext = existingOrder;
+                    oContext.setProperty("OrderID", orderId);
+                    oContext.setProperty("Region", region);
+                    oContext.setProperty("Country", country);
+                    oContext.setProperty("Product", product);
+                    oContext.setProperty("Revenue", revenue);
+                    oContext.setProperty("OrderDate", orderDate);
+                    
+                    await oModel.submitChanges();
                     MessageToast.show("Order updated successfully");
                 } else {
-                    // Create new order
-                    await oModel.create("/SalesOrders", orderData);
+                    // Create new order using OData V4 API
+                    const oContext = oModel.bindContext("/SalesOrders", null);
+                    oContext.setProperty("OrderID", orderId);
+                    oContext.setProperty("Region", region);
+                    oContext.setProperty("Country", country);
+                    oContext.setProperty("Product", product);
+                    oContext.setProperty("Revenue", revenue);
+                    oContext.setProperty("OrderDate", orderDate);
+                    
+                    await oModel.submitChanges();
                     MessageToast.show("Order created successfully");
                 }
 
@@ -333,10 +344,25 @@ sap.ui.define([
         async _deleteOrder(orderData) {
             try {
                 const oModel = this.getView().getModel();
-                await oModel.remove(`/SalesOrders(${orderData.ID})`);
-                MessageToast.show("Order deleted successfully");
-                await this.refreshSalesData();
-                await this.refreshChart();
+                const salesTable = this.byId("salesTable");
+                const binding = salesTable.getBinding("items");
+                
+                // Find the context for the order to delete
+                const contexts = binding.getContexts();
+                const contextToDelete = contexts.find(context => {
+                    const data = context.getObject();
+                    return data.OrderID === orderData.OrderID;
+                });
+                
+                if (contextToDelete) {
+                    contextToDelete.delete();
+                    await oModel.submitChanges();
+                    MessageToast.show("Order deleted successfully");
+                    await this.refreshSalesData();
+                    await this.refreshChart();
+                } else {
+                    MessageToast.show("Order not found for deletion");
+                }
             } catch (error) {
                 console.error('Error deleting order:', error);
                 MessageToast.show("Error deleting order: " + error.message);
@@ -351,7 +377,8 @@ sap.ui.define([
         async refreshChart() {
             try {
                 const oModel = this.getView().getModel();
-                const response = await oModel.callFunction("/getGeographyData");
+                const oContext = oModel.bindContext("/getGeographyData(...)");
+                const response = await oContext.execute();
                 
                 if (response && response.length > 0) {
                     this._renderPieChart(response);
