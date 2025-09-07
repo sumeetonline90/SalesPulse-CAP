@@ -19,7 +19,7 @@
   },
   "scripts": {
     "build": "ui5 build --clean-dest --include-task=generateCachebusterInfo",
-    "start": "node node_modules/@sap/approuter/approuter.js --working-dir dist",
+    "start": "node node_modules/@sap/approuter/approuter.js",
     "deploy-config": "npx -p @sap/ux-ui5-tooling fiori add deploy-config cf"
   }
 }

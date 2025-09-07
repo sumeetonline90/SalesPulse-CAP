@@ -52,20 +52,20 @@ sap.ui.define([
                        // Read file content using FileReader
                        const base64Content = await this.readFileAsBase64(file);
 
-                       // Fetch CSRF token via approuter relative path
-                       const csrfHead = await fetch('/odata/v4/sales-service/', {
-                           method: 'HEAD',
-                           headers: { 'x-csrf-token': 'Fetch' },
-                           credentials: 'include'
-                       });
+                    // Fetch CSRF token via approuter relative path
+                    const csrfHead = await fetch('/odata/v4/sales-service/', {
+                        method: 'HEAD',
+                        headers: { 'x-csrf-token': 'Fetch' },
+                        credentials: 'include'
+                    });
                        const csrfToken = csrfHead.headers.get('x-csrf-token');
 
                        if (!csrfToken) {
                            throw new Error('Failed to fetch CSRF token');
                        }
 
-                       // Post upload to approuter-relative backend route
-                       const response = await fetch('/odata/v4/sales-service/uploadExcel', {
+                    // Post upload to approuter-relative backend route
+                    const response = await fetch('/odata/v4/sales-service/uploadExcel', {
                            method: 'POST',
                            headers: {
                                'Content-Type': 'application/json',
