@@ -50,7 +50,7 @@ sap.ui.define([
             
             try {
                 // Step 1: Fetch CSRF token first
-                const tokenResponse = await fetch('/odata/v4/sales-service/', {
+                const tokenResponse = await fetch('/sales-service/', {
                     method: 'HEAD',
                     headers: {
                         'Accept': 'application/json'
@@ -75,7 +75,7 @@ sap.ui.define([
                 };
 
                 // Step 4: Make POST request with CSRF token
-                const uploadResponse = await fetch('/odata/v4/sales-service/uploadExcel', {
+                const uploadResponse = await fetch('/sales-service/uploadExcel', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
