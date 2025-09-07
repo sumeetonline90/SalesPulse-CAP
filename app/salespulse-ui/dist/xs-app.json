@@ -21,6 +21,12 @@
       "authenticationType": "xsuaa"
     },
     {
+      "source": "^/odata/v4/sales-service/(.*)$",
+      "target": "/odata/v4/sales-service/$1",
+      "destination": "srv-api",
+      "authenticationType": "xsuaa"
+    },
+    {
       "source": "^(.*)$",
       "target": "$1",
       "localDir": ".",

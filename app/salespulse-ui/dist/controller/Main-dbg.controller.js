@@ -52,13 +52,27 @@ sap.ui.define([
                        // Read file content using FileReader
                        const base64Content = await this.readFileAsBase64(file);
 
-                       // Use direct fetch to backend service with CORS headers
-                       const response = await fetch('https://innovalaisandbox-sandbox-salespulse-cap-srv.cfapps.in30.hana.ondemand.com/sales-service/uploadExcel', {
+                       // Fetch CSRF token via approuter relative path
+                       const csrfHead = await fetch('/odata/v4/sales-service/', {
+                           method: 'HEAD',
+                           headers: { 'x-csrf-token': 'Fetch' },
+                           credentials: 'include'
+                       });
+                       const csrfToken = csrfHead.headers.get('x-csrf-token');
+
+                       if (!csrfToken) {
+                           throw new Error('Failed to fetch CSRF token');
+                       }
+
+                       // Post upload to approuter-relative backend route
+                       const response = await fetch('/odata/v4/sales-service/uploadExcel', {
                            method: 'POST',
                            headers: {
                                'Content-Type': 'application/json',
-                               'Accept': 'application/json'
+                               'Accept': 'application/json',
+                               'x-csrf-token': csrfToken
                            },
+                           credentials: 'include',
                            body: JSON.stringify({
                                excel: base64Content
                            })
